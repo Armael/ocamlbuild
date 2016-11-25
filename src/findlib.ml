@@ -21,32 +21,29 @@ open Command
 type command_spec = Command.spec
 
 type error =
-  | Cannot_run_ocamlfind
   | Dependency_not_found of string * string (* package, dependency *)
   | Package_not_found of string
-  | Cannot_parse_query of string * string (* package, explaination *)
+  | Package_loop of string
 
 exception Findlib_error of error
 
 let error x = raise (Findlib_error x)
 
 let string_of_error = function
-  | Cannot_run_ocamlfind ->
-      "Cannot run Ocamlfind."
   | Dependency_not_found(p, d) ->
       Printf.sprintf
         "Ocamlfind returned \"%s\" as a dependency for package \"%s\" but does \
 not know this dependency." d p
   | Package_not_found p ->
       Printf.sprintf "Findlib package not found: \"%s\"." p
-  | Cannot_parse_query(p, e) ->
-      Printf.sprintf "Cannot parse Ocamlfind query for package \"%s\": %s" p e
+  | Package_loop p ->
+      Printf.sprintf "The following Findlib package is required by itself: \"%s\"." p
 
 let report_error e =
   prerr_endline (string_of_error e);
   exit 2
 
-let ocamlfind = "ocamlfind"
+let () = Findlib.init ()
 
 type package = {
   name: string;
@@ -69,27 +66,31 @@ let run_and_parse lexer command =
 let run_and_read command =
   Printf.ksprintf run_and_read command
 
+let package_property_or_emp preds name prop =
+  try Findlib.package_property preds name prop with
+    Not_found -> ""
+
 let rec query name =
   try
     Hashtbl.find packages name
   with Not_found ->
     try
-      let n, d, v, a_byte, lo, l =
-        run_and_parse
-          (Lexers.ocamlfind_query Const.Source.ocamlfind_query)
-          "%s query -l -predicates byte %s" ocamlfind name
+      let d = package_property_or_emp [] name "description" in
+      let v = package_property_or_emp [] name "version" in
+      let lo = package_property_or_emp [] name "linkopts" in
+      let l = Findlib.package_directory name in
+      let a_byte =
+        try
+          Pathname.concat l (Findlib.package_property ["byte"] name "archive")
+        with Not_found -> ""
       in
       let a_native =
-        run_and_parse
-          (Lexers.trim_blanks Const.Source.ocamlfind_query)
-          "%s query -a-format -predicates native %s" ocamlfind name
+        try
+          Pathname.concat l (Findlib.package_property ["native"] name "archive")
+        with Not_found -> ""
       in
-      let deps =
-        run_and_parse
-          (Lexers.blank_sep_strings Const.Source.ocamlfind_query)
-          "%s query -r -p-format %s" ocamlfind name
-      in
-      let deps = List.filter ((<>) n) deps in
+      let deps = Findlib.package_deep_ancestors [] [name] in
+      let deps = List.filter ((<>) name) deps in
       let deps =
         try
           List.map query deps
@@ -99,7 +100,7 @@ let rec query name =
           error (Dependency_not_found (name, dep_name))
       in
       let package = {
-        name = n;
+        name;
         description = d;
         version = v;
         archives_byte = a_byte;
@@ -108,15 +109,11 @@ let rec query name =
         location = l;
         dependencies = deps;
       } in
-      Hashtbl.add packages n package;
+      Hashtbl.add packages name package;
       package
     with
-      | Failure _ ->
-          (* TODO: Improve to differenciate whether ocamlfind cannot be
-             run or is not installed *)
-          error Cannot_run_ocamlfind
-      | Lexers.Error (s,_) ->
-          error (Cannot_parse_query (name, s))
+      | Findlib.No_such_package (name, _) -> error (Package_not_found name)
+      | Findlib.Package_loop name -> error (Package_loop name)
 
 let split_nl s =
   let x = ref [] in
@@ -135,12 +132,13 @@ let before_space s =
   with Not_found -> s
 
 let list () =
-  List.map before_space (split_nl & run_and_read "%s list" ocamlfind)
+  Fl_package_base.list_packages ()
+  |> List.sort compare
 
 (* The closure algorithm is easy because the dependencies are already closed
 and sorted for each package. We only have to make the union. We could also
-make another ocamlfind query such as:
-  ocamlfind query -p-format -r package1 package2 ... *)
+make another findlib query such as:
+  Findlib.package_deep_ancestors [] [package1; package2; ...] *)
 let topological_closure l =
   let add l x = if List.mem x l then l else x :: l in
   let l = List.fold_left begin fun acc p ->

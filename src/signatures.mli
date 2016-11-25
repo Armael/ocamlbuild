@@ -471,10 +471,9 @@ module type FINDLIB = sig
   type command_spec
 
   type error =
-    | Cannot_run_ocamlfind
     | Dependency_not_found of string * string (* package, dependency *)
     | Package_not_found of string
-    | Cannot_parse_query of string * string (* package, explanation *)
+    | Package_loop of string
 
   exception Findlib_error of error
 
@@ -501,7 +500,7 @@ module type FINDLIB = sig
 
   val query: string -> package
     (** Query information about a package, given its name. May raise
-[Not_found]. *)
+[Findlib_error _]. *)
 
   val list: unit -> string list
     (** Return the names of all known packages. *)
