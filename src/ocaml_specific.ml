@@ -698,15 +698,15 @@ let () =
   end else begin
     try
       (* Note: if there is no -pkg option, ocamlfind won't be called *)
-      let pkgs = List.map Findlib.query !Options.ocaml_pkgs in
-      flag ["ocaml"; "byte"; "compile"] (Findlib.compile_flags_byte pkgs);
-      flag ["ocaml"; "native"; "compile"] (Findlib.compile_flags_native pkgs);
-      flag ["ocaml"; "byte"; "link"] (Findlib.link_flags_byte pkgs);
-      flag ["ocaml"; "native"; "link"] (Findlib.link_flags_native pkgs);
+      let pkgs = List.map My_findlib.query !Options.ocaml_pkgs in
+      flag ["ocaml"; "byte"; "compile"] (My_findlib.compile_flags_byte pkgs);
+      flag ["ocaml"; "native"; "compile"] (My_findlib.compile_flags_native pkgs);
+      flag ["ocaml"; "byte"; "link"] (My_findlib.link_flags_byte pkgs);
+      flag ["ocaml"; "native"; "link"] (My_findlib.link_flags_native pkgs);
       (* PR#6794: ocamlbuild should pass -package flags when building C files *)
-      flag ["c"; "compile"] (Findlib.include_flags pkgs)
-    with Findlib.Findlib_error e ->
-      Findlib.report_error e
+      flag ["c"; "compile"] (My_findlib.include_flags pkgs)
+    with My_findlib.Findlib_error e ->
+      My_findlib.report_error e
   end
 
 (* parameterized tags *)

@@ -33,8 +33,9 @@ OCAMLLEX  ?= ocamllex
 endif
 
 CP        ?= cp
-COMPFLAGS ?= -w L -w R -w Z -I src -I +unix -safe-string -bin-annot
-LINKFLAGS ?= -I +unix -I src
+FINDLIB   ?= $(shell ocamlfind query -i-format findlib)
+COMPFLAGS ?= -w L -w R -w Z -I src -I +unix $(FINDLIB) -safe-string -bin-annot
+LINKFLAGS ?= -I +unix $(FINDLIB) -I src
 
 PACK_CMO= $(addprefix src/,\
   const.cmo \
@@ -69,7 +70,7 @@ PACK_CMO= $(addprefix src/,\
   report.cmo \
   tools.cmo \
   fda.cmo \
-  findlib.cmo \
+  my_findlib.cmo \
   ocaml_arch.cmo \
   ocaml_utils.cmo \
   ocaml_dependencies.cmo \
@@ -123,7 +124,7 @@ allopt: byte alias # compatibility alias
 
 ocamlbuild.byte: ocamlbuild_pack.cmo $(EXTRA_CMO) src/ocamlbuild.cmo
 	$(OCAMLC) $(LINKFLAGS) -o ocamlbuild.byte \
-          unix.cma ocamlbuild_pack.cmo $(EXTRA_CMO) src/ocamlbuild.cmo
+          unix.cma findlib.cma ocamlbuild_pack.cmo $(EXTRA_CMO) src/ocamlbuild.cmo
 
 ocamlbuildlight.byte: ocamlbuild_pack.cmo ocamlbuildlight.cmo
 	$(OCAMLC) $(LINKFLAGS) -o ocamlbuildlight.byte \
@@ -131,7 +132,7 @@ ocamlbuildlight.byte: ocamlbuild_pack.cmo ocamlbuildlight.cmo
 
 ocamlbuild.native: ocamlbuild_pack.cmx $(EXTRA_CMX) src/ocamlbuild.cmx
 	$(OCAMLOPT) $(LINKFLAGS) -o ocamlbuild.native \
-          unix.cmxa ocamlbuild_pack.cmx $(EXTRA_CMX) src/ocamlbuild.cmx
+          unix.cmxa findlib.cmxa ocamlbuild_pack.cmx $(EXTRA_CMX) src/ocamlbuild.cmx
 
 # The libraries
 
@@ -379,4 +380,3 @@ include .depend
 
 .PHONY: all allopt clean beforedepend
 .PHONY: install installopt installopt_really depend
-

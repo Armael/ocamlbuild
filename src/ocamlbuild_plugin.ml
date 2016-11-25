@@ -24,7 +24,7 @@ include Pathname.Operators
 include Tags.Operators
 module Rule = Ocamlbuild_pack.Rule
 module Options = Ocamlbuild_pack.Options
-module Findlib = Ocamlbuild_pack.Findlib
+module Findlib = Ocamlbuild_pack.My_findlib
 type command = Command.t = Seq of command list | Cmd of spec | Echo of string list * string | Nop
 and spec = Command.spec =
   | N | S of spec list | A of string | P of string | Px of string
