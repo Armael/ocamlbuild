@@ -167,17 +167,6 @@ and unescape = parse
   | _ as c                       { c :: unescape lexbuf }
   | eof                          { [] }
 
-and ocamlfind_query source = parse
-  | newline*
-    "package:" space* (not_newline* as n) newline+
-    "description:" space* (not_newline* as d) newline+
-    "version:" space* (not_newline* as v) newline+
-    "archive(s):" space* (not_newline* as a) newline+
-    "linkopts:" space* (not_newline* as lo) newline+
-    "location:" space* (not_newline* as l) newline+
-    { n, d, v, a, lo, l }
-  | _ { error source lexbuf "Bad ocamlfind query" }
-
 and trim_blanks source = parse
   | blank* (not_blank* as word) blank* { word }
   | _ { error source lexbuf "Bad input for trim_blanks" }

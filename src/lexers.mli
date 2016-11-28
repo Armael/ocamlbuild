@@ -43,7 +43,4 @@ val path_scheme : bool -> Loc.source -> Lexing.lexbuf ->
   | `Var of (string * Glob.globber)
   ] list
 
-val ocamlfind_query : Loc.source -> Lexing.lexbuf ->
-  string * string * string * string * string * string
-
 val tag_gen : Loc.source -> Lexing.lexbuf -> string * string option
